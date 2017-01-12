@@ -1,0 +1,537 @@
+
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <script type="text/javascript" src="./libs/jszip.min.js"></script>
+    <script type="text/javascript" src="./libs/jszip-utils.min.js"></script>
+    <script src="./libs/codef_tween.js"></script>
+
+
+
+    <script src="./libs/three.min.js"></script>
+    <script src="./libs/OBJLoader.js"></script>
+
+    <script src="./libs/codef_core.js"></script>
+    <script src="./libs/Projector.js"></script>
+    <script src="./libs/OrbitControls.js"></script>
+
+    <script src="./libs/HorizontalBlurShader.js"></script>
+    <script src="./libs/VerticalBlurShader.js"></script>
+    <script src="./libs/CopyShader.js"></script>
+    <script src="./libs/FXAAShader.js"></script>
+
+
+
+
+    <script src="./libs/RenderPass.js"></script>
+    <script src="./libs/ShaderPass.js"></script>
+    <script src="./libs/MaskPass.js"></script>
+    <script src="./libs/EffectComposer.js"></script>
+    <style>
+      canvas
+      {
+        width: 100%; height: 100%
+      }
+      body
+      {
+        color: rgb(0, 0, 0);
+        font-family:Monospace;
+        font-size:13px;
+        text-align:center;
+        background-color: #fff;
+        margin: 0px;
+        overflow: hidden;
+      }
+    </style>
+    <script>
+      var camera, scene, GL_Canvas;
+      var group;
+      var raycaster = new THREE.Raycaster();
+      var mouse = new THREE.Vector2();
+
+
+      JSZipUtils.getBinaryContent('base/mixmerge.obj.zip', function(err, data) {
+        if(err) {
+          throw err; // or handle err
+        }
+        var zip = new JSZip(data);
+        objData = zip.file("mixmerge.obj").asText();
+        init();
+      });
+
+      function init() {
+        bgsound = new Audio();
+        bgsound.src="base/back1.mp3";
+        bgsound.autoplay=true;
+        bgsound.loop=true;
+        container = document.getElementById( 'main' );
+        GL_Canvas = new THREE.WebGLRenderer({ antialias:true });
+        GL_Canvas.setSize( window.innerWidth,window.innerHeight);
+        document.getElementById('main').appendChild(GL_Canvas.domElement);
+
+        camera = new THREE.PerspectiveCamera( 35, window.innerWidth/window.innerHeight, 1, 10000 );
+        camera.position.x = -333.82386314755394;
+        camera.position.y = 1129.0868520573647;
+        camera.position.z = 1030.6780256324928;
+
+        scene = new THREE.Scene();
+
+        group = new THREE.Object3D();
+
+
+        scene.add(group);
+        THREE.ImageUtils.crossOrigin = '';
+
+        object = new THREE.OBJLoader().parse(objData);
+        nullmaterial = new THREE.MeshPhongMaterial( {color:"rgb(10,10,10)",specular:0x303030});
+
+
+        var plateaumaterial = new THREE.MeshPhongMaterial( {color:"rgb(80,80,80)",specular:0x080808});
+        plateau = new THREE.Mesh(object.children[24].geometry,plateaumaterial);
+        plateau.orimaterial= plateaumaterial;
+        plateau.name="plateau";
+        plateau.geometry.computeVertexNormals();
+        plateau.geometry.computeFaceNormals();
+        group.add(plateau);
+
+        var plateaumaterial2 = new THREE.MeshPhongMaterial( {color:"rgb(0,0,0)",specular:0x000000});
+        plateau2 = new THREE.Mesh(object.children[25].geometry,plateaumaterial2);
+        plateau2.orimaterial= plateaumaterial2;
+        plateau2.name="plateau2";
+        plateau2.geometry.computeVertexNormals();
+        plateau2.geometry.computeFaceNormals();
+        group.add(plateau2);
+
+        var samplebtnmaterial = new THREE.MeshPhongMaterial( {color:"rgb(7,210,0)",specular:0xffffff});
+        samplebtn = new Array();
+        for (var i = 1; i <= 16; i++){
+          samplebtn[i] = new THREE.Mesh(object.children[2+i-1].geometry,samplebtnmaterial);
+          samplebtn[i].orimaterial= samplebtnmaterial;
+          samplebtn[i].name="samplebtn"+i;
+          samplebtn[i].myobj = {x:0,y:0,z:0};
+          samplebtn[i].mytl = new TimelineMax({paused:true, repeat:-1});
+          samplebtn[i].mytl.to(samplebtn[i].myobj, 0.2, {y:-7, ease:Linear.easeNone});
+          samplebtn[i].mytl.to(samplebtn[i].myobj, 0.01, {y:0, ease:Linear.easeNone});
+          samplebtn[i].mytl.addPause();
+          samplebtn[i].geometry.computeVertexNormals();
+          samplebtn[i].geometry.computeFaceNormals();
+          samplebtn[i].snd=new Audio();
+          samplebtn[i].snd.src="40MA/"+i+".mp3"
+            group.add(samplebtn[i]);
+        }
+
+        var bgbtnmaterial = new THREE.MeshPhongMaterial( {color:"rgb(210,7,0)",specular:0xffffff});
+        bgbtn = new Array();
+        for (var i = 1; i <= 6; i++){
+          bgbtn[i] = new THREE.Mesh(object.children[18+i-1].geometry,bgbtnmaterial);
+          bgbtn[i].orimaterial= bgbtnmaterial;
+          bgbtn[i].name="bgbtn"+i;
+          bgbtn[i].myobj = {x:0,y:0,z:0};
+          bgbtn[i].mytl = new TimelineMax({paused:true, repeat:-1});
+          bgbtn[i].mytl.to(bgbtn[i].myobj, 0.1, {y:-4, ease:Linear.easeNone});
+          bgbtn[i].mytl.to(bgbtn[i].myobj, 0.01, {y:0, ease:Linear.easeNone});
+          bgbtn[i].mytl.addPause();
+          bgbtn[i].geometry.computeVertexNormals();
+          bgbtn[i].geometry.computeFaceNormals();
+          group.add(bgbtn[i]);
+        }
+
+        sampvolume = new THREE.Mesh(object.children[0].geometry,samplebtnmaterial);
+        sampvolume.orimaterial= samplebtnmaterial;
+        sampvolume.name="sampvolume";
+        sampvolume.geometry.computeVertexNormals();
+        sampvolume.geometry.computeFaceNormals();
+        sampvolume.position.x=85;
+        group.add(sampvolume);
+
+        bgvolume = new THREE.Mesh(object.children[1].geometry,bgbtnmaterial);
+        bgvolume.orimaterial= bgbtnmaterial;
+        bgvolume.name="bgvolume";
+        bgvolume.geometry.computeVertexNormals();
+        bgvolume.geometry.computeFaceNormals();
+        bgvolume.position.x=85;
+        group.add(bgvolume);
+
+        objects = [sampvolume,bgvolume];
+
+        floor = new THREE.Mesh( new THREE.PlaneBufferGeometry( 8000, 8000, 32,32 ), new THREE.MeshBasicMaterial( { color: 0x0f0f0f } ) );
+        floor.orimaterial = new THREE.MeshBasicMaterial( { color: 0x0f0f0f });
+        floor.name="floor";
+        floor.rotation.x = - 90 * ( Math.PI / 180 );
+        floor.position.y = -50.0;
+        scene.add( floor );
+
+
+           var texture = THREE.ImageUtils.loadTexture( "40MA/"+"titlepic_thb.jpg" );
+          var geometry2 = new THREE.PlaneBufferGeometry( 844/5, 603/5, 32,32 );
+          var material2 = new THREE.MeshLambertMaterial( {map: texture } );
+          cube2 = new THREE.Mesh( geometry2, material2 );
+          cube2.name="title";
+          cube2.rotation.x = - 90 * ( Math.PI / 180 );
+          cube2.position.y = -50.0;
+          cube2.position.x+=502;
+          cube2.position.y+=50.5;
+          cube2.position.z=0;
+
+
+          scene.add(cube2);
+
+
+
+
+        scene.fog = new THREE.Fog( 0x010101, 80, 4000 );
+
+
+        scene.add( new THREE.AmbientLight(  0x101010 ) );
+
+        var spotLight = new THREE.SpotLight( 0xdddddd );
+        spotLight.position.set( -5000, 2000, 5000 );
+
+
+
+        scene.add( spotLight );
+
+        var spotLight = new THREE.SpotLight( 0xdddddd );
+        spotLight.position.set( 5000, 2000, -5000 );
+        scene.add( spotLight );
+
+        controls = new THREE.OrbitControls( camera, GL_Canvas.domElement );
+
+
+
+        GL_Canvas.domElement.addEventListener( 'mousemove', onMouseMove, false );
+        GL_Canvas.domElement.addEventListener("mousedown", onClick, false);
+        GL_Canvas.domElement.addEventListener("mouseup", releaz, false);
+
+
+
+        var renderTargetParameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat, stencilBufer: false };
+        renderTargetGlow = new THREE.WebGLRenderTarget( 800, 600, renderTargetParameters );
+        vblur = new THREE.ShaderPass( THREE.VerticalBlurShader );
+        hblur = new THREE.ShaderPass( THREE.HorizontalBlurShader );
+        var bluriness = 3;
+        vblur.uniforms[ "v" ].value=bluriness / window.innerWidth;
+        hblur.uniforms[ "h" ].value=bluriness / window.innerHeight;
+        renderModelGlow = new THREE.RenderPass( scene, camera);
+        glowcomposer = new THREE.EffectComposer( GL_Canvas, renderTargetGlow );
+        glowcomposer.addPass( renderModelGlow );
+        glowcomposer.addPass( hblur );
+        glowcomposer.addPass( vblur );
+        glowcomposer.addPass( hblur );
+        glowcomposer.addPass( vblur );
+        glowcomposer.addPass( hblur );
+        glowcomposer.addPass( vblur );
+        glowcomposer.addPass( hblur );
+        glowcomposer.addPass( vblur );
+
+
+        var finalshader = {
+          uniforms: {
+            tDiffuse: { type: "t", value: 0, texture: null },
+            tGlow: { type: "t", value: 1, texture: null }
+          },
+
+          vertexShader: [
+            "varying vec2 vUv;",
+
+            "void main() {",
+
+            "vUv = vec2( uv.x, uv.y );",
+            "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
+
+            "}"
+          ].join("\n"),
+
+          fragmentShader: [
+            "uniform sampler2D tDiffuse;",
+            "uniform sampler2D tGlow;",
+
+            "varying vec2 vUv;",
+
+            "void main() {",
+
+            "vec4 texel = texture2D( tDiffuse, vUv );",
+            "vec4 glow = texture2D( tGlow, vUv );",
+            "gl_FragColor = texel + vec4(0.55, 0.55, 0.55, 1.0) * glow * 3.0;",
+
+            "}"
+          ].join("\n")
+        };
+
+        finalshader.uniforms[ 'tGlow' ].value = glowcomposer.renderTarget2;
+
+        var renderModel = new THREE.RenderPass( scene, camera );
+
+
+        var finalPass = new THREE.ShaderPass( finalshader );
+        finalPass.needsSwap = true;
+
+        finalPass.renderToScreen = true;
+
+        renderTarget = new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight, renderTargetParameters );
+
+        finalcomposer = new THREE.EffectComposer( GL_Canvas, renderTarget );
+
+        var effectFXAA = new THREE.ShaderPass( THREE.FXAAShader );
+        effectFXAA.uniforms[ 'resolution' ].value.set( 1 / window.innerWidth, 1 / window.innerHeight );
+
+
+        finalcomposer.addPass( renderModel );
+        finalcomposer.addPass( effectFXAA );
+        finalcomposer.addPass( finalPass );
+
+        controls.noKeys=true;
+        controls.target = new THREE.Vector3(150, -190, 0);
+        controls.update();
+        go();
+
+
+      }
+
+      function go() {
+
+
+        var bla = new THREE.MeshBasicMaterial( {color:0x000000});
+        floor.material=bla;
+        sampvolume.material=bla;
+        bgvolume.material=bla;
+        plateau.material=bla;
+        plateau2.material=bla;
+        for (var i = 1; i <=16 ; i++){
+          samplebtn[i].material=bla;
+        }
+        for (var i = 1; i <=6 ; i++){
+          bgbtn[i].material=bla;
+        }
+
+
+        for (var i = 1; i <=16 ; i++){
+          if(samplebtn[i].snd.duration){
+            if(!samplebtn[i].snd.paused){
+              samplebtn[i].material = samplebtn[i].orimaterial;
+              samplebtn[i].material.emissive.set(0x003000);
+            }
+          }
+        }
+
+        for (var i = 1; i <=6 ; i++){
+          if(i==curbg){
+            bgbtn[i].material = bgbtn[i].orimaterial;
+            bgbtn[i].material.emissive.set(0x300000);
+          }
+        }
+
+
+        for (var i = 1; i <=16 ; i++){
+          samplebtn[i].position.y = samplebtn[i].myobj.y;
+        }
+        for (var i = 1; i <=6 ; i++){
+          bgbtn[i].position.y = bgbtn[i].myobj.y;
+        }
+        glowcomposer.render();
+
+
+
+        sampvolume.material= sampvolume.orimaterial;
+        bgvolume.material= bgvolume.orimaterial;
+        plateau.material= plateau.orimaterial;
+        plateau2.material= plateau2.orimaterial;
+        for (var i = 1; i <=16 ; i++){
+          if(samplebtn[i].snd.duration){
+            samplebtn[i].material=samplebtn[i].orimaterial;
+            samplebtn[i].material.emissive.set(0x000000);
+
+          }
+          else
+            samplebtn[i].material=nullmaterial;
+        }
+        for (var i = 1; i <=6 ; i++){
+          bgbtn[i].material=bgbtn[i].orimaterial;
+          bgbtn[i].material.emissive.set(0x000000);
+        }
+
+        floor.material=floor.orimaterial;
+
+
+
+        finalcomposer.render();
+
+        if(bgvolclicked)
+          bgvolume.position.x=(mouse.x-bgvolclickedref)*400;
+
+        if(bgvolume.position.x<-85) bgvolume.position.x=-85;
+        if(bgvolume.position.x>85) bgvolume.position.x=85;
+
+        bgsound.volume=(bgvolume.position.x+85)/170;
+
+        if(sampvolclicked)
+          sampvolume.position.x=(mouse.x-sampvolclickedref)*400;
+
+        if(sampvolume.position.x<-85) sampvolume.position.x=-85;
+        if(sampvolume.position.x>85) sampvolume.position.x=85;
+
+        for (var i = 1; i <= 16; i++){
+          samplebtn[i].snd.volume=(sampvolume.position.x+85)/170;
+
+        }
+
+
+        //GL_Canvas.render(scene,camera);
+        requestAnimFrame( go );
+      }
+
+
+
+      function onMouseMove( event ) {
+
+        var rect = container.getBoundingClientRect();
+        offsetX = rect.left;
+        offsetY = rect.top;
+
+        mouse.x = ( (event.clientX - offsetX)/ window.innerWidth ) * 2 - 1;
+        mouse.y = -( (event.clientY - offsetY)/ window.innerHeight ) * 2 + 1;
+
+
+
+
+
+      }
+
+      function playClick(){
+        click.pause();
+        click.currentTime = 0;
+        click.play();
+
+      }
+
+      function playspl(num){
+        for (var i = 1; i <= 16; i++){
+          samplebtn[i].snd.pause();
+          samplebtn[i].snd.currentTime = 0;
+        }
+
+        samplebtn[num].snd.play();
+        samplebtn[num].mytl.resume();
+      }
+
+      curbg=1;
+      bgvolclicked=0;
+      bgvolclickedref=0;
+      sampvolclicked=0;
+      sampvolclickedref=0;
+
+      function onClick( event ) {
+
+        raycaster.setFromCamera( mouse, camera );
+
+        var intersects = raycaster.intersectObjects( group.children );
+
+        if(intersects.length>0){
+          controls.enabled=false;
+
+          switch (intersects[ 0 ].object.name) {
+            case "bgvolume":
+              bgvolclicked=1;
+              bgvolclickedref=mouse.x;
+              break;
+                case "sampvolume":
+              sampvolclicked=1;
+              sampvolclickedref=mouse.x;
+              break;
+                case "samplebtn1":
+              playspl(1);
+              break;
+                case "samplebtn2":
+              playspl(2);
+              break;
+                case "samplebtn3":
+              playspl(3);
+              break;
+                case "samplebtn4":
+              playspl(4);
+              break;
+                case "samplebtn5":
+              playspl(5);
+              break;
+                case "samplebtn6":
+              playspl(6);
+              break;
+                case "samplebtn7":
+              playspl(7);
+              break;
+                case "samplebtn8":
+              playspl(8);
+              break;
+                case "samplebtn9":
+              playspl(9);
+              break;
+                case "samplebtn10":
+              playspl(10);
+              break;
+                case "samplebtn11":
+              playspl(11);
+              break;
+                case "samplebtn12":
+              playspl(12);
+              break;
+                case "samplebtn13":
+              playspl(13);
+              break;
+                case "samplebtn14":
+              playspl(14);
+              break;
+                case "samplebtn15":
+              playspl(15);
+              break;
+                case "samplebtn16":
+              playspl(16);
+              break;
+                case "bgbtn1":
+              intersects[ 0 ].object.mytl.resume();
+              bgsound.src="base/back1.mp3";
+              bgsound.play();
+              curbg=1;
+              break;
+                case "bgbtn2":
+              intersects[ 0 ].object.mytl.resume();
+              bgsound.src="base/back2.mp3";
+              bgsound.play();
+
+              curbg=2;
+              break;
+                case "bgbtn3":
+              intersects[ 0 ].object.mytl.resume();
+              bgsound.src="base/back3.mp3";
+              bgsound.play();
+              curbg=3;
+              break;
+                default:
+              break;
+                }
+        }
+
+      }
+
+      function releaz(){
+        controls.enabled=true;
+        bgvolclicked=0;
+        bgvolclickedrefref=0;
+        sampvolclicked=0;
+        sampvolclickedrefref=0;
+      }
+
+    </script>
+      <style id="style-1-cropbar-clipper">/* Copyright 2014 Evernote Corporation. All rights reserved. */
+.en-markup-crop-options {
+    top: 18px !important;
+    left: 50% !important;
+    margin-left: -100px !important;
+    width: 200px !important;
+    border: 2px rgba(255,255,255,.38) solid !important;
+    border-radius: 4px !important;
+}
+
+.en-markup-crop-options div div:first-of-type {
+    margin-left: 0px !important;
+}
+</style></head>
+  <body><div id="main"></div>
+</body></html>
